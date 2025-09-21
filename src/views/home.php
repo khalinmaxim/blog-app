@@ -178,7 +178,7 @@ $postModel = new Post();
 
         <?php if (isset($_SESSION['user_id']) && $isConnected && $hasSubscriptionsTable): ?>
         <div class="status-card">
-            <h2>📋 Ваша персональная лента</h2>
+            <h2>📋 Лента подписок</h2>
             <?php
             try {
                 // Получаем подписки пользователя
@@ -186,7 +186,7 @@ $postModel = new Post();
                 $subscriptions = $subscriptionModel->getSubscriptions($_SESSION['user_id']);
 
                 if (!empty($subscriptions)) {
-                    // Если есть подписки, показываем ленту подписок
+                    // Если есть подписки, показываем только посты от подписок
                     $feedPosts = $postModel->getFeed($_SESSION['user_id']);
 
                     if (!empty($feedPosts)): ?>
@@ -199,8 +199,15 @@ $postModel = new Post();
                                     <h3><?= htmlspecialchars($post['title']) ?></h3>
                                     <p><?= nl2br(htmlspecialchars(substr($post['content'], 0, 150))) ?>...</p>
                                     <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #eee;">
-                                        <small>👤 <?= htmlspecialchars($post['username']) ?></small><br>
+                                        <small>👤 <a href="/profile.php?user_id=<?= $post['user_id'] ?>"
+                                                   style="color: #667eea; text-decoration: none;">
+                                                   <?= htmlspecialchars($post['username']) ?>
+                                               </a>
+                                        </small><br>
                                         <small>📅 <?= date('d.m.Y H:i', strtotime($post['created_at'])) ?></small>
+                                        <?php if ($post['visibility'] === 'request'): ?>
+                                            <br><small style="color: #ffc107;">🔐 Доступ по запросу</small>
+                                        <?php endif; ?>
                                     </div>
                                     <a href="/posts/view.php?id=<?= $post['id'] ?>"
                                        style="display: inline-block; margin-top: 1rem; color: #667eea;">
@@ -211,7 +218,7 @@ $postModel = new Post();
                         </div>
                     <?php else: ?>
                         <div style="text-align: center; padding: 40px;">
-                            <p style="color: #666; margin-bottom: 20px;">📭 Нет новых постов от подписок</p>
+                            <p style="color: #666; margin-bottom: 20px;">📭 Нет постов от подписок</p>
                             <p>Пользователи, на которых вы подписаны, еще не публиковали посты</p>
                         </div>
                     <?php endif;
@@ -239,17 +246,19 @@ $postModel = new Post();
             ?>
         </div>
 
-        <!-- Отдельный блок для рекомендаций -->
+        <!-- Блок рекомендаций - публичные посты от неподписанных пользователей -->
         <div class="status-card">
-            <h2>🌐 Популярные публичные посты</h2>
+            <h2>🌐 Рекомендации для вас</h2>
             <?php
             try {
-                $publicPosts = $postModel->getPublicPosts();
+                $recommendedPosts = $postModel->getRecommendedPosts($_SESSION['user_id'], 6);
 
-                if (!empty($publicPosts)): ?>
+                if (!empty($recommendedPosts)): ?>
+                    <p style="color: #666; margin-bottom: 20px;">
+                        Популярные публичные посты от других пользователей
+                    </p>
                     <div class="post-grid">
-                        <?php foreach ($publicPosts as $post): ?>
-                            <?php if ($post['user_id'] != $_SESSION['user_id']): // Исключаем свои посты ?>
+                        <?php foreach ($recommendedPosts as $post): ?>
                             <div class="post-card">
                                 <h3><?= htmlspecialchars($post['title']) ?></h3>
                                 <p><?= nl2br(htmlspecialchars(substr($post['content'], 0, 150))) ?>...</p>
@@ -266,23 +275,23 @@ $postModel = new Post();
                                     Читать далее →
                                 </a>
                                 <div style="margin-top: 10px;">
-                                    <a href="/profile.php?user_id=<?= $post['user_id'] ?>"
-                                       style="color: #28a745; font-size: 14px; text-decoration: none;">
-                                        👤 Подписаться
+                                    <a href="/subscribe.php?user_id=<?= $post['user_id'] ?>"
+                                       style="color: #28a745; font-size: 14px; text-decoration: none;"
+                                       onclick="return confirm('Подписаться на <?= htmlspecialchars(addslashes($post['username'])) ?>?')">
+                                        👤 Подписаться на автора
                                     </a>
                                 </div>
                             </div>
-                            <?php endif; ?>
                         <?php endforeach; ?>
                     </div>
                 <?php else: ?>
                     <div style="text-align: center; padding: 40px;">
-                        <p style="color: #666;">Пока нет публичных постов</p>
+                        <p style="color: #666;">Пока нет рекомендаций</p>
                     </div>
                 <?php endif;
 
             } catch (Exception $e) {
-                echo "<div class='error'>⚠️ Ошибка загрузки публичных постов: " . htmlspecialchars($e->getMessage()) . "</div>";
+                echo "<div class='error'>⚠️ Ошибка загрузки рекомендаций: " . htmlspecialchars($e->getMessage()) . "</div>";
             }
             ?>
         </div>

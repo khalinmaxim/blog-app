@@ -1,4 +1,6 @@
 <?php
+require_once __DIR__ . '/../utils/Database.php';
+
 class Subscription {
     private $db;
 

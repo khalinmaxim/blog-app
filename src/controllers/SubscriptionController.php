@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/../models/Subscription.php';
+require_once __DIR__ . '/../models/User.php';
 
 class SubscriptionController {
     private $subscriptionModel;

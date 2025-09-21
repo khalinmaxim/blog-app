@@ -242,17 +242,14 @@ class Post {
                SELECT DISTINCT p.*, u.username
                FROM posts p
                JOIN users u ON p.user_id = u.id
-               WHERE (
-                   p.visibility = 'public'
-                   OR p.user_id IN (
-                       SELECT target_id FROM subscriptions WHERE subscriber_id = ?
-                   )
+               WHERE p.user_id IN (
+                   SELECT target_id FROM subscriptions WHERE subscriber_id = ?
                )
-               AND p.user_id != ? -- Исключаем собственные посты
+               AND p.visibility IN ('public', 'request') -- Только публичные и по запросу
                ORDER BY p.created_at DESC
                LIMIT 20
            ");
-           $stmt->execute([$userId, $userId]);
+           $stmt->execute([$userId]);
            return $stmt->fetchAll(PDO::FETCH_ASSOC);
        } catch (PDOException $e) {
            error_log("Feed error: " . $e->getMessage());
@@ -298,6 +295,28 @@ class Post {
            return $stmt->fetchAll(PDO::FETCH_ASSOC);
        } catch (PDOException $e) {
            error_log("Public posts error: " . $e->getMessage());
+           return [];
+       }
+   }
+
+   public function getRecommendedPosts($userId, $limit = 10) {
+       try {
+           $stmt = $this->db->prepare("
+               SELECT DISTINCT p.*, u.username
+               FROM posts p
+               JOIN users u ON p.user_id = u.id
+               WHERE p.visibility = 'public'
+               AND p.user_id != ?
+               AND p.user_id NOT IN (
+                   SELECT target_id FROM subscriptions WHERE subscriber_id = ?
+               )
+               ORDER BY p.created_at DESC
+               LIMIT ?
+           ");
+           $stmt->execute([$userId, $userId, $limit]);
+           return $stmt->fetchAll(PDO::FETCH_ASSOC);
+       } catch (PDOException $e) {
+           error_log("Recommended posts error: " . $e->getMessage());
            return [];
        }
    }
