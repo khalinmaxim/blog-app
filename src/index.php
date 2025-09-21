@@ -53,6 +53,13 @@ switch ($path) {
     case '/users.php':
         include 'users.php';
         break;
+    case '/comments/add.php':
+        include 'comments/add.php';
+        break;
+
+    case '/comments/delete.php':
+        include 'comments/delete.php';
+        break;
     default:
         if (strpos($path, '/posts/view.php') === 0) {
             include 'posts/view.php';
