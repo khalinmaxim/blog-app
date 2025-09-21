@@ -1,5 +1,4 @@
 <?php
-session_start();
 
 // Простая маршрутизация
 $request_uri = $_SERVER['REQUEST_URI'];
@@ -40,6 +39,19 @@ switch ($path) {
         break;
     case '/posts/view.php':
         include 'posts/view.php';
+        break;
+    case '/subscribe.php':
+        include 'subscribe.php';
+        break;
+
+    case '/unsubscribe.php':
+        include 'unsubscribe.php';
+        break;
+    case '/subscriptions.php':
+        include 'subscriptions.php';
+        break;
+    case '/users.php':
+        include 'users.php';
         break;
     default:
         if (strpos($path, '/posts/view.php') === 0) {

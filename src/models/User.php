@@ -31,4 +31,15 @@ class User {
         $stmt->execute([$id]);
         return $stmt->fetch(PDO::FETCH_ASSOC);
     }
+
+    public function getAllUsersExcept($excludeUserId) {
+        $stmt = $this->db->prepare("
+            SELECT id, username, created_at
+            FROM users
+            WHERE id != ?
+            ORDER BY username ASC
+        ");
+        $stmt->execute([$excludeUserId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 }

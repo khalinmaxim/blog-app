@@ -29,3 +29,29 @@ function displayTags($tags) {
     }
     return '';
 }
+
+function getSubscribeButton($targetUserId, $currentUserId = null) {
+    if (!$currentUserId || $targetUserId == $currentUserId) {
+        return '';
+    }
+
+    $subscription = new Subscription();
+    $isSubscribed = $subscription->isSubscribed($currentUserId, $targetUserId);
+
+    if ($isSubscribed) {
+        return '
+        <a href="/unsubscribe.php?user_id=' . $targetUserId . '"
+           style="background: #dc3545; color: white; padding: 8px 16px;
+                  text-decoration: none; border-radius: 5px; font-size: 14px;"
+           onclick="return confirm(\'Отписаться от этого пользователя?\')">
+           ❌ Отписаться
+        </a>';
+    } else {
+        return '
+        <a href="/subscribe.php?user_id=' . $targetUserId . '"
+           style="background: #28a745; color: white; padding: 8px 16px;
+                  text-decoration: none; border-radius: 5px; font-size: 14px;">
+           ✅ Подписаться
+        </a>';
+    }
+}

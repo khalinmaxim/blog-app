@@ -1,19 +1,30 @@
 <?php
+session_start();
 require_once __DIR__ . '/../utils/Database.php';
+require_once __DIR__ . '/../models/Post.php';
+require_once __DIR__ . '/../models/Subscription.php';
+require_once __DIR__ . '/../models/User.php';
 
 $db = Database::getInstance();
 $isConnected = $db->isConnected();
 $tables = [];
+$hasSubscriptionsTable = false;
 
 if ($isConnected) {
     try {
         $tables = $db->getConnection()->query(
             "SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'"
         )->fetchAll(PDO::FETCH_ASSOC);
+
+        // Проверяем наличие таблицы подписок
+        $hasSubscriptionsTable = in_array('subscriptions', array_column($tables, 'table_name'));
+
     } catch (PDOException $e) {
         error_log("Table query error: " . $e->getMessage());
     }
 }
+
+$postModel = new Post();
 ?>
 
 <!DOCTYPE html>
@@ -165,25 +176,25 @@ if ($isConnected) {
             <?php endif; ?>
         </div>
 
-        <!-- Последние посты -->
-        <?php if ($isConnected && count($tables) > 0): ?>
-            <div class="status-card">
-                <h2>📋 Последние публичные посты</h2>
-                <?php
-                try {
-                    $stmt = $db->getConnection()->query("
-                        SELECT p.*, u.username
-                        FROM posts p
-                        JOIN users u ON p.user_id = u.id
-                        WHERE p.visibility = 'public'
-                        ORDER BY p.created_at DESC
-                        LIMIT 6
-                    ");
-                    $posts = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        <?php if (isset($_SESSION['user_id']) && $isConnected && $hasSubscriptionsTable): ?>
+        <div class="status-card">
+            <h2>📋 Ваша персональная лента</h2>
+            <?php
+            try {
+                // Получаем подписки пользователя
+                $subscriptionModel = new Subscription();
+                $subscriptions = $subscriptionModel->getSubscriptions($_SESSION['user_id']);
 
-                    if ($posts): ?>
+                if (!empty($subscriptions)) {
+                    // Если есть подписки, показываем ленту подписок
+                    $feedPosts = $postModel->getFeed($_SESSION['user_id']);
+
+                    if (!empty($feedPosts)): ?>
+                        <p style="color: #666; margin-bottom: 20px;">
+                            📬 Посты пользователей, на которых вы подписаны
+                        </p>
                         <div class="post-grid">
-                            <?php foreach ($posts as $post): ?>
+                            <?php foreach ($feedPosts as $post): ?>
                                 <div class="post-card">
                                     <h3><?= htmlspecialchars($post['title']) ?></h3>
                                     <p><?= nl2br(htmlspecialchars(substr($post['content'], 0, 150))) ?>...</p>
@@ -199,14 +210,86 @@ if ($isConnected) {
                             <?php endforeach; ?>
                         </div>
                     <?php else: ?>
-                        <p>Пока нет публичных постов. Будьте первым!</p>
+                        <div style="text-align: center; padding: 40px;">
+                            <p style="color: #666; margin-bottom: 20px;">📭 Нет новых постов от подписок</p>
+                            <p>Пользователи, на которых вы подписаны, еще не публиковали посты</p>
+                        </div>
                     <?php endif;
 
-                } catch (PDOException $e) {
-                    echo "<p class='error'>Ошибка загрузки постов: " . htmlspecialchars($e->getMessage()) . "</p>";
+                } else {
+                    // Если нет подписок, предлагаем подписаться
+                    ?>
+                    <div style="text-align: center; padding: 40px;">
+                        <p style="color: #666; margin-bottom: 20px;">👀 Вы еще ни на кого не подписаны</p>
+                        <p>Подпишитесь на других пользователей, чтобы видеть их посты здесь!</p>
+                        <div style="display: flex; gap: 10px; justify-content: center; margin-top: 20px;">
+                            <a href="/users.php"
+                               style="background: #667eea; color: white; padding: 12px 24px;
+                                      text-decoration: none; border-radius: 5px;">
+                                🔍 Найти пользователей
+                            </a>
+                        </div>
+                    </div>
+                    <?php
                 }
-                ?>
+
+            } catch (Exception $e) {
+                echo "<div class='error'>⚠️ Ошибка загрузки ленты: " . htmlspecialchars($e->getMessage()) . "</div>";
+            }
+            ?>
+        </div>
+
+        <!-- Отдельный блок для рекомендаций -->
+        <div class="status-card">
+            <h2>🌐 Популярные публичные посты</h2>
+            <?php
+            try {
+                $publicPosts = $postModel->getPublicPosts();
+
+                if (!empty($publicPosts)): ?>
+                    <div class="post-grid">
+                        <?php foreach ($publicPosts as $post): ?>
+                            <?php if ($post['user_id'] != $_SESSION['user_id']): // Исключаем свои посты ?>
+                            <div class="post-card">
+                                <h3><?= htmlspecialchars($post['title']) ?></h3>
+                                <p><?= nl2br(htmlspecialchars(substr($post['content'], 0, 150))) ?>...</p>
+                                <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #eee;">
+                                    <small>👤 <?= htmlspecialchars($post['username']) ?></small><br>
+                                    <small>📅 <?= date('d.m.Y H:i', strtotime($post['created_at'])) ?></small>
+                                </div>
+                                <a href="/posts/view.php?id=<?= $post['id'] ?>"
+                                   style="display: inline-block; margin-top: 1rem; color: #667eea;">
+                                    Читать далее →
+                                </a>
+                                <div style="margin-top: 10px;">
+                                    <a href="/profile.php?user_id=<?= $post['user_id'] ?>"
+                                       style="color: #28a745; font-size: 14px; text-decoration: none;">
+                                        👤 Подписаться
+                                    </a>
+                                </div>
+                            </div>
+                            <?php endif; ?>
+                        <?php endforeach; ?>
+                    </div>
+                <?php else: ?>
+                    <div style="text-align: center; padding: 40px;">
+                        <p style="color: #666;">Пока нет публичных постов</p>
+                    </div>
+                <?php endif;
+
+            } catch (Exception $e) {
+                echo "<div class='error'>⚠️ Ошибка загрузки публичных постов: " . htmlspecialchars($e->getMessage()) . "</div>";
+            }
+            ?>
+        </div>
+        <?php elseif (isset($_SESSION['user_id']) && !$hasSubscriptionsTable): ?>
+        <div class="status-card">
+            <h2>📋 Лента подписок</h2>
+            <div class="warning">
+                ⚠️ Таблица подписок не найдена.
+                <a href="/init_database.php" style="color: orange;">Инициализировать базу данных</a>
             </div>
+        </div>
         <?php endif; ?>
 
         <!-- Статистика -->

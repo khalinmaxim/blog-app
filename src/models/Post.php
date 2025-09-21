@@ -71,21 +71,6 @@ class Post {
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
-    public function getPublicPosts() {
-        $stmt = $this->db->query("
-            SELECT p.*, u.username,
-                   array_agg(t.name) as tags
-            FROM posts p
-            JOIN users u ON p.user_id = u.id
-            LEFT JOIN post_tags pt ON p.id = pt.post_id
-            LEFT JOIN tags t ON pt.tag_id = t.id
-            WHERE p.visibility = 'public'
-            GROUP BY p.id, u.username
-            ORDER BY p.created_at DESC
-        ");
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
-    }
-
     public function findById($postId) {
         $stmt = $this->db->prepare("
             SELECT p.*, u.username
@@ -250,4 +235,70 @@ class Post {
 
         return $post;
     }
+
+   public function getFeed($userId) {
+       try {
+           $stmt = $this->db->prepare("
+               SELECT DISTINCT p.*, u.username
+               FROM posts p
+               JOIN users u ON p.user_id = u.id
+               WHERE (
+                   p.visibility = 'public'
+                   OR p.user_id IN (
+                       SELECT target_id FROM subscriptions WHERE subscriber_id = ?
+                   )
+               )
+               AND p.user_id != ? -- Исключаем собственные посты
+               ORDER BY p.created_at DESC
+               LIMIT 20
+           ");
+           $stmt->execute([$userId, $userId]);
+           return $stmt->fetchAll(PDO::FETCH_ASSOC);
+       } catch (PDOException $e) {
+           error_log("Feed error: " . $e->getMessage());
+           return [];
+       }
+   }
+
+   public function getUserFeedWithOwnPosts($userId) {
+       try {
+           $stmt = $this->db->prepare("
+               SELECT DISTINCT p.*, u.username
+               FROM posts p
+               JOIN users u ON p.user_id = u.id
+               WHERE (
+                   p.visibility = 'public'
+                   OR p.user_id IN (
+                       SELECT target_id FROM subscriptions WHERE subscriber_id = ?
+                   )
+                   OR p.user_id = ? -- Включаем собственные посты
+               )
+               ORDER BY p.created_at DESC
+               LIMIT 20
+           ");
+           $stmt->execute([$userId, $userId]);
+           return $stmt->fetchAll(PDO::FETCH_ASSOC);
+       } catch (PDOException $e) {
+           error_log("User feed error: " . $e->getMessage());
+           return [];
+       }
+   }
+
+   public function getPublicPosts($limit = 10) {
+       try {
+           $stmt = $this->db->prepare("
+               SELECT p.*, u.username
+               FROM posts p
+               JOIN users u ON p.user_id = u.id
+               WHERE p.visibility = 'public'
+               ORDER BY p.created_at DESC
+               LIMIT ?
+           ");
+           $stmt->execute([$limit]);
+           return $stmt->fetchAll(PDO::FETCH_ASSOC);
+       } catch (PDOException $e) {
+           error_log("Public posts error: " . $e->getMessage());
+           return [];
+       }
+   }
 }
