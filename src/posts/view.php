@@ -2,6 +2,7 @@
 session_start();
 require_once __DIR__ . '/../utils/Database.php';
 require_once __DIR__ . '/../models/Post.php';
+require_once __DIR__ . '/../utils/helpers.php';
 
 $db = Database::getInstance();
 
@@ -17,7 +18,7 @@ if (!$postId) {
 
 try {
     $postModel = new Post();
-    $post = $postModel->findById($postId);
+    $post = $postModel->getPostWithTags($postId);
 
     if (!$post) {
         die("Пост не найден");
@@ -47,20 +48,28 @@ $content = '
 
     <h1>' . htmlspecialchars($post['title']) . '</h1>
 
-    <div style="color: #666; margin-bottom: 2rem;">
-        <strong>👤 ' . htmlspecialchars($post['username']) . '</strong> |
-        <span>📅 ' . date('d.m.Y H:i', strtotime($post['created_at'])) . '</span> |
-        <span>👁️ ' . htmlspecialchars($post['visibility']) . '</span>
-    </div>
+   <div style="color: #666; margin-bottom: 2rem;">
+       <strong>👤 ' . htmlspecialchars($post['username']) . '</strong> |
+       <span>📅 ' . date('d.m.Y H:i', strtotime($post['created_at'])) . '</span> |
+       <span>👁️ ' . htmlspecialchars($post['visibility']) . '</span>
+       ' . displayTags($post['tags'] ?? null) . '
+   </div>
 
     <div style="line-height: 1.6; font-size: 16px; background: white; padding: 2rem; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
         ' . nl2br(htmlspecialchars($post['content'])) . '
     </div>
 
     ' . (isset($_SESSION['user_id']) && $_SESSION['user_id'] == $post['user_id'] ? '
-    <div style="margin-top: 2rem;">
-        <a href="/posts/edit.php?id=' . $post['id'] . '" style="color: #667eea; margin-right: 1rem;">✏️ Редактировать</a>
-        <a href="/posts/delete.php?id=' . $post['id'] . '" style="color: #dc3545;" onclick="return confirm(\'Удалить этот пост?\')">🗑️ Удалить</a>
+    <div style="margin-top: 2rem; display: flex; gap: 10px;">
+        <a href="/posts/edit.php?id=' . $post['id'] . '"
+           style="background: #28a745; color: white; padding: 8px 16px; text-decoration: none; border-radius: 5px;">
+           ✏️ Редактировать
+        </a>
+       <a href="/posts/delete.php?id=' . $post['id'] . '"
+          style="background: #dc3545; color: white; padding: 8px 16px; text-decoration: none; border-radius: 5px;"
+          onclick="return confirmDelete(event, \'' . htmlspecialchars(addslashes($post['title'])) . '\')">
+          🗑️ Удалить
+       </a>
     </div>
     ' : '') . '
 </div>

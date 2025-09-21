@@ -44,5 +44,16 @@
 
         <?php echo $content; ?>
     </div>
+
+    <script>
+    // Функция подтверждения удаления с показом названия поста
+    function confirmDelete(event, postTitle) {
+        if (!confirm('Вы уверены, что хотите удалить пост?\n\n"' + postTitle + '"')) {
+            event.preventDefault();
+            return false;
+        }
+        return true;
+    }
+    </script>
 </body>
 </html>
