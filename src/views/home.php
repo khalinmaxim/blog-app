@@ -254,7 +254,11 @@ $postModel = new Post();
                                 <h3><?= htmlspecialchars($post['title']) ?></h3>
                                 <p><?= nl2br(htmlspecialchars(substr($post['content'], 0, 150))) ?>...</p>
                                 <div style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid #eee;">
-                                    <small>👤 <?= htmlspecialchars($post['username']) ?></small><br>
+                                    <small>👤 <a href="/profile.php?user_id=<?= $post['user_id'] ?>"
+                                               style="color: #667eea; text-decoration: none;">
+                                               <?= htmlspecialchars($post['username']) ?>
+                                           </a>
+                                    </small><br>
                                     <small>📅 <?= date('d.m.Y H:i', strtotime($post['created_at'])) ?></small>
                                 </div>
                                 <a href="/posts/view.php?id=<?= $post['id'] ?>"

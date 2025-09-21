@@ -2,7 +2,6 @@
 session_start();
 require_once __DIR__ . '/../utils/Database.php';
 require_once __DIR__ . '/../models/Post.php';
-require_once __DIR__ . '/../utils/helpers.php';
 
 $db = Database::getInstance();
 
@@ -48,12 +47,22 @@ $content = '
 
     <h1>' . htmlspecialchars($post['title']) . '</h1>
 
-   <div style="color: #666; margin-bottom: 2rem;">
-       <strong>👤 ' . htmlspecialchars($post['username']) . '</strong> |
-       <span>📅 ' . date('d.m.Y H:i', strtotime($post['created_at'])) . '</span> |
-       <span>👁️ ' . htmlspecialchars($post['visibility']) . '</span>
-       ' . displayTags($post['tags'] ?? null) . '
-   </div>
+    <div style="color: #666; margin-bottom: 2rem;">
+        <strong>👤 <a href="/profile.php?user_id=' . $post['user_id'] . '"
+                   style="color: #667eea; text-decoration: none;">
+                   ' . htmlspecialchars($post['username']) . '
+               </a>
+        </strong> |
+        <span>📅 ' . date('d.m.Y H:i', strtotime($post['created_at'])) . '</span> |
+        <span>👁️ ' . htmlspecialchars($post['visibility']) . '</span>';
+
+// Добавляем теги, если они есть
+if (isset($post['tags']) && is_array($post['tags']) && !empty($post['tags'])) {
+    $content .= '| <span>🏷️ ' . implode(', ', array_map('htmlspecialchars', $post['tags'])) . '</span>';
+}
+
+$content .= '
+    </div>
 
     <div style="line-height: 1.6; font-size: 16px; background: white; padding: 2rem; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1);">
         ' . nl2br(htmlspecialchars($post['content'])) . '
@@ -65,11 +74,11 @@ $content = '
            style="background: #28a745; color: white; padding: 8px 16px; text-decoration: none; border-radius: 5px;">
            ✏️ Редактировать
         </a>
-       <a href="/posts/delete.php?id=' . $post['id'] . '"
-          style="background: #dc3545; color: white; padding: 8px 16px; text-decoration: none; border-radius: 5px;"
-          onclick="return confirmDelete(event, \'' . htmlspecialchars(addslashes($post['title'])) . '\')">
-          🗑️ Удалить
-       </a>
+        <a href="/posts/delete.php?id=' . $post['id'] . '"
+           style="background: #dc3545; color: white; padding: 8px 16px; text-decoration: none; border-radius: 5px;"
+           onclick="return confirm(\'Вы уверены, что хотите удалить этот пост?\\n\\\"' . htmlspecialchars(addslashes($post['title'])) . '\\\"\')">
+           🗑️ Удалить
+        </a>
     </div>
     ' : '') . '
 </div>
